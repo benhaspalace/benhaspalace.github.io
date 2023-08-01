@@ -22,6 +22,8 @@ title: SATOLAP blog
 email: benhaspalace@satolap.com
 description: >- # this means to ignore newlines until "baseurl:"
     Technical blog by Bence Palotas collecting notes on various projects and technologies I am working on.
+    Disclaimer: All of the content is my own and does not represent the views of my employer.
+    All of the information is provided on an as-is basis, without any warranties.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 
