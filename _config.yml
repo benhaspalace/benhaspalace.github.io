@@ -21,9 +21,9 @@
 title: SATOLAP blog 
 email: benhaspalace@satolap.com
 description: >- # this means to ignore newlines until "baseurl:"
-    Technical blog for SATOLAP collecting notes on various projects and technologies I am working on.
-baseurl: "benhaspalace.github.io" # the subpath of your site, e.g. /blog
-url: "benhaspalace.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+    Technical blog by Bence Palotas collecting notes on various projects and technologies I am working on.
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
 
 # Build settings
 theme: minima
