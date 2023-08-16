@@ -176,6 +176,7 @@ This Log Analytics worksspace will be used to host the data in a table that will
 ```
 @{
     'Az' = '10.*'
+    'Az.OperationalInsights' = '3.*'
     'Microsoft.Graph.Identity.DirectoryManagement' = '2.2.0'
     'Microsoft.Graph.Authentication' = '2.2.0'
 }
@@ -183,6 +184,7 @@ This Log Analytics worksspace will be used to host the data in a table that will
 - On the file navgiation row select the `profile.ps1` configuration file and add the below rows:
 ```
 Import-Module Az
+import Module Az.OperationalInsights
 Import-Module Microsoft.Graph.Identity.DirectoryManagement
 Import-Module Microsoft.Graph.Authentication
 ```
@@ -211,19 +213,21 @@ Import-Module Microsoft.Graph.Authentication
 
 ```
 $ClientId = "<Insert Client Id Here>"
-$ResourceGroup = "<Insert Resource Group Name Here>"
+$ResourceGroup = "<Insert KeyVault Resource Group Name Here>"
 $LogAnalyticsWorkspaceName = "AADLogAnalyticsTest"
 # Replace with your Workspace ID
 $CustomerId = "<Insert Log Analytics Workspace Id Here>"  
+$VaultName = <>
+$SecretName = <>
 
 # Replace with your Primary Key
-$SharedKey = (Get-AzOperationalInsightsWorkspaceSharedKey -ResourceGroupName $ResourceGroup -Name $LogAnalyticsWorkspaceName).PrimarySharedKey
+$SharedKey = (Get-AzOperationalInsightsWorkspaceSharedKey -ResourceGroupName $ResourceGroup -Name $SecretName).PrimarySharedKey
 
 # Specify the name of the record type that you'll be creating
 $LogType = "<Insert Log Analytics Workspace Table Name Here>"
 
 # Authenticate
-Connect-MgGrap -Identity
+Connect-MgGraph -Identity
 $TenantId = (Get-MgContext).TenantId
 
 # Query the Key Vault for the secret
@@ -242,15 +246,17 @@ $RoleCount = $RoleHolders.Count
 
 # Optional name of a field that includes the timestamp for the data. If the time field is not specified, Azure Monitor assumes the time is the message ingestion time
 $TimeStampField = "TimeGenerated"
-
+$TimeGenerated = Get-Date ([datetime]::UtcNow) -Format O
 
 # Create two records with the same set of properties to create
 $json = @"
-    {
-        "TimeGenerated": Get-Date ([datetime]::UtcNow) -Format O,
-        "RoleId": $RoleId,
-        "RoleHolderCount": $RoleCount
-    }
+    [
+        {
+            "TimeGenerated": "$TimeGenerated",
+            "RoleId": "$RoleId",
+            "RoleHolderCount": $RoleCount
+        }
+    ]
 "@
 
 # Create the function to create the authorization signature
