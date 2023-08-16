@@ -71,9 +71,77 @@ This Log Analytics worksspace will be used to host the data in a table that will
 1. On the [Azure Portal](https://portal.azure.com) search for [Log Analytics workspaces](https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.OperationalInsights%2Fworkspaces)
 2. Select the Log Analytics Workspace created before and go to `Settings/Tables`
 3. Click `Create/New custom log (DCR-based)`
-    - Add a descriptive name for the table eg. EntraIDGARoleCount
-    - For the Data collection rule click `Create new data collection rule`, add a descriptive name to the new DCR eg. EntraIDGARoleCountDCR and click `Done`
-    - For the Data collection endpoint select the previously created DCE
+    - Add a descriptive name for the table eg. EntraIDRoleCount
+    - For the Data collection rule click `Create new data collection rule`, add a descriptive name to the new DCR eg. EntraIDRoleCountDCR and click `Done`
+    - For the Data collection endpoint select the previously created DCE and click `Next`
+    - On `Schema and transformation` upload a sample `.json` file eg.:
+    ```
+    [
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567891Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9999
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567892Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9998
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567893Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9997
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567894Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9996
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567895Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9995
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567896Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9994
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567897Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9993
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567898Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9992
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567899Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9991
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567810Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9990
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567811Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9989
+        },
+        {
+            "TimeGenerated": "2023-08-02T07:01:23.4567812Z",
+            "RoleId": "00000000-0000-0000-0000-000000000000",
+            "RoleHolderCount": 9988
+        }
+    ]
+    ```
+    - Alternatively use [this tool](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/tutorial-logs-ingestion-portal#generate-sample-data) to generate the sample data file. The tool can also be used to upload the sample data to the Log Analytics Workspace Table.
+    - Click `Next` and then `Create`
+    - Find the `immutableId` of the DCR according to [this reference](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/tutorial-logs-ingestion-portal#collect-information-from-the-dcr).
 
 ## Configure the Azure Function App
 1. After the Azure Function App to deployed, navigate to the resource.
@@ -104,10 +172,10 @@ This Log Analytics worksspace will be used to host the data in a table that will
 ### Configure prerequisites
 1. Navigate to `Functions/App files` in your Function App.
 2. On the file navigation row select the `host.json` configuration file and make sure that `managedDependency` setting is set to `true`.
-3. On the file navigation row select the `prerequisites.psd1` configuration file. Replace the contents with the below code:
+3. On the file navigation row select the `requirements.psd1` configuration file. Replace the contents with the below code:
 ```
 @{
-    'Az' = '1.*'
+    'Az' = '10.*'
     'Microsoft.Graph.Identity.DirectoryManagement' = '2.2.0'
     'Microsoft.Graph.Authentication' = '2.2.0'
 }
@@ -142,10 +210,21 @@ Import-Module Microsoft.Graph.Authentication
 1. Once the Function is created, navigate to 
 
 ```
+$ClientId = "<Insert Client Id Here>"
+$ResourceGroup = "<Insert Resource Group Name Here>"
+$LogAnalyticsWorkspaceName = "AADLogAnalyticsTest"
+# Replace with your Workspace ID
+$CustomerId = "<Insert Log Analytics Workspace Id Here>"  
+
+# Replace with your Primary Key
+$SharedKey = (Get-AzOperationalInsightsWorkspaceSharedKey -ResourceGroupName $ResourceGroup -Name $LogAnalyticsWorkspaceName).PrimarySharedKey
+
+# Specify the name of the record type that you'll be creating
+$LogType = "<Insert Log Analytics Workspace Table Name Here>"
+
 # Authenticate
 Connect-MgGrap -Identity
 $TenantId = (Get-MgContext).TenantId
-$ClientId = "<Insert Client Id Here>"
 
 # Query the Key Vault for the secret
 Connect-AzAccount -Identity
@@ -157,9 +236,72 @@ Connect-MgGraph -TenantId $TenantId -ClientSecretCredential $ClientSecretCredent
 # Query Entra ID
 $RoleId = (Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'").Id
 $RoleHolders = Get-MgDirectoryRoleMemberAsUser -DirectoryRoleId $RoleId
+$RoleCount = $RoleHolders.Count
 
-# TODO Send data to Log Analytics Workspace
+# Send data to Log Analytics Workspace
 
+# Optional name of a field that includes the timestamp for the data. If the time field is not specified, Azure Monitor assumes the time is the message ingestion time
+$TimeStampField = "TimeGenerated"
+
+
+# Create two records with the same set of properties to create
+$json = @"
+    {
+        "TimeGenerated": Get-Date ([datetime]::UtcNow) -Format O,
+        "RoleId": $RoleId,
+        "RoleHolderCount": $RoleCount
+    }
+"@
+
+# Create the function to create the authorization signature
+Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
+{
+    $xHeaders = "x-ms-date:" + $date
+    $stringToHash = $method + "`n" + $contentLength + "`n" + $contentType + "`n" + $xHeaders + "`n" + $resource
+
+    $bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
+    $keyBytes = [Convert]::FromBase64String($sharedKey)
+
+    $sha256 = New-Object System.Security.Cryptography.HMACSHA256
+    $sha256.Key = $keyBytes
+    $calculatedHash = $sha256.ComputeHash($bytesToHash)
+    $encodedHash = [Convert]::ToBase64String($calculatedHash)
+    $authorization = 'SharedKey {0}:{1}' -f $customerId,$encodedHash
+    return $authorization
+}
+
+# Create the function to create and post the request
+Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType)
+{
+    $method = "POST"
+    $contentType = "application/json"
+    $resource = "/api/logs"
+    $rfc1123date = [DateTime]::UtcNow.ToString("r")
+    $contentLength = $body.Length
+    $signature = Build-Signature `
+        -customerId $customerId `
+        -sharedKey $sharedKey `
+        -date $rfc1123date `
+        -contentLength $contentLength `
+        -method $method `
+        -contentType $contentType `
+        -resource $resource
+    $uri = "https://" + $customerId + ".ods.opinsights.azure.com" + $resource + "?api-version=2016-04-01"
+
+    $headers = @{
+        "Authorization" = $signature;
+        "Log-Type" = $logType;
+        "x-ms-date" = $rfc1123date;
+        "time-generated-field" = $TimeStampField;
+    }
+
+    $response = Invoke-WebRequest -Uri $uri -Method $method -ContentType $contentType -Headers $headers -Body $body -UseBasicParsing
+    return $response
+
+}
+
+# Submit the data to the API endpoint
+Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($json)) -logType $logType
 ```
 
 ## Configure the Dashboard
